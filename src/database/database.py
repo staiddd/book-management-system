@@ -8,7 +8,7 @@ from config import settings
 
 # Create an asynchronous engine for the database connection
 engine: AsyncEngine = create_async_engine(
-    url=settings.DATABASE_URL,
+    url=settings.DB_URL,
     echo=False,
     echo_pool=False,
     pool_size=5,

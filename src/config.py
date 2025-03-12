@@ -8,6 +8,8 @@ class Settings(BaseSettings):
     POSTGRES_PORT: str
     POSTGRES_HOST: str
 
+    DB_URL: str
+
     model_config = SettingsConfigDict(env_file='.env', extra="ignore")
 
 settings = Settings()
