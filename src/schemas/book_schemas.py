@@ -1,3 +1,4 @@
+from typing import Optional
 from pydantic import BaseModel
 
 from schemas.author_schemas import AuthorSchema
@@ -9,4 +10,4 @@ class BookSchema(BaseModel):
     title: str
     published_year: int
     genre: GenreEnum
-    author: AuthorSchema
+    author: Optional[AuthorSchema] = None

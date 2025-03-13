@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 from schemas.book_schemas import BookSchema
@@ -10,43 +10,57 @@ from custom_exceptions.book_exceptions import (
     BookGetException,
     BookUpdateException,
 )
+from schemas.validation_schemas import BookFilterParams, BookSortParams
 
 
 class BookRepository:
+    def _build_conditions(self, filters: BookFilterParams) -> tuple:
+        conditions = []
+        params = {}
+
+        if filters.book_id is not None:
+            conditions.append("books.id = :book_id")
+            params["book_id"] = filters.book_id
+
+        if filters.title:
+            conditions.append("books.title ILIKE :title")
+            params["title"] = f"%{filters.title}%"
+
+        if filters.year is not None:
+            conditions.append("books.published_year = :year")
+            params["year"] = filters.year
+
+        if filters.author_name:
+            conditions.append("authors.name ILIKE :author_name")
+            params["author_name"] = f"%{filters.author_name}%"
+
+        return " AND ".join(conditions) if conditions else "1=1", params
+
     async def get_books(
         self,
         session: AsyncSession,
+        filters: BookFilterParams,
+        sorting: BookSortParams,
         skip: int = 0,
         limit: int = 10,
-        book_id: Optional[int] = None,
-        title: Optional[str] = None,
-        year: Optional[int] = None,
-        author_name: Optional[str] = None,
-        order_by: Optional[str] = "id",
-        order_desc: bool = False,
     ) -> List[BookSchema]:
         try:
-            order_clause = f"books.{order_by} {'DESC' if order_desc else 'ASC'}"
+            order_clause = f"books.{sorting.order_by} {'DESC' if sorting.order_desc else 'ASC'}"
+            
+            where_clause, params = self._build_conditions(filters)
+            params.update({
+                "skip": skip,
+                "limit": limit,
+            })
+            
             query = f"""
                 SELECT books.id, books.title, books.published_year, books.genre, authors.id as author_id, authors.name as author_name
                 FROM books
                 JOIN authors ON books.author_id = authors.id
-                WHERE (:book_id IS NULL OR books.id = :book_id)
-                AND (:title IS NULL OR books.title ILIKE :title)
-                AND (:year IS NULL OR books.published_year = :year)
-                AND (:author_name IS NULL OR authors.name ILIKE :author_name)
+                WHERE {where_clause}
                 ORDER BY {order_clause}
                 OFFSET :skip LIMIT :limit
             """
-            
-            params = {
-                "book_id": book_id,
-                "title": f"%{title}%" if title else None,
-                "year": year,
-                "author_name": f"%{author_name}%" if author_name else None,
-                "skip": skip,
-                "limit": limit,
-            }
             
             result = await session.execute(text(query), params)
             books = result.fetchall()
@@ -61,4 +75,4 @@ class BookRepository:
                 ) for row in books
             ]
         except Exception as e:
-            raise BookCreateException(str(e))
+            raise BookGetException(str(e))
