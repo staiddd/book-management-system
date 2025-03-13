@@ -1,12 +1,12 @@
-from typing import List, Optional
+from typing import Annotated, List, Optional
 from fastapi import APIRouter, Depends, UploadFile, status
 
 from custom_exceptions.book_exceptions import BookBulkImportException
-from dependencies import SessionDep, BookRepositoryDep
+from dependencies import FiltersDep, SessionDep, BookRepositoryDep, SortingDep
+from schemas.auth_schemas import UserOut
 from schemas.book_schemas import BookCreateSchema, BookNewSchema, BookSchema, BookUpdateSchema
-from schemas.validation_schemas import BookFilterParams, BookSortParams
 from utils.enums import OnErrorEnum
-from utils.util_funcs import get_filters, get_sorting, parse_file, split_into_batches
+from utils.util_funcs import parse_file, split_into_batches
 from utils.validation_funcs import validate_batch_size, validate_book_data, validate_book_id
 
 
@@ -19,8 +19,8 @@ router = APIRouter(
 async def get_books(
     session: SessionDep,
     book_repo: BookRepositoryDep,
-    filters: BookFilterParams = Depends(get_filters),
-    sorting: BookSortParams = Depends(get_sorting),
+    filters: FiltersDep,
+    sorting: SortingDep,
     skip: Optional[int] = 0,
     limit: Optional[int] = 10
 ) -> List[BookSchema]:
@@ -47,14 +47,15 @@ async def get_book_by_id(
 async def create_book(
     session: SessionDep,
     book_repo: BookRepositoryDep,
-    book_insert: BookCreateSchema
+    book_insert: BookCreateSchema,
+    author: Annotated[UserOut, Depends(get_current_auth_user)],
 ) -> BookNewSchema:
     return await book_repo.create_book(
         session=session,
         book_insert=book_insert
     )
 
-@router.post('/bulk/', status_code=status.HTTP_201_CREATED)
+@router.post('/import/', status_code=status.HTTP_201_CREATED)
 async def bulk_import_books(
     session: SessionDep,
     book_repo: BookRepositoryDep,
