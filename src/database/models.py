@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import TIMESTAMP, Enum, ForeignKey, Integer, String, func
+from sqlalchemy import TIMESTAMP, Enum, ForeignKey, Integer, LargeBinary, String, func
 from sqlalchemy.orm import Mapped, DeclarativeBase, mapped_column, relationship
 from typing import List
 from utils.enums import GenreEnum
@@ -14,6 +14,8 @@ class Author(Base):
     __tablename__ = "authors"
     
     name: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    email: Mapped[str]
+    password_hash: Mapped[bytes] = mapped_column(LargeBinary)
     books: Mapped[List["Book"]] = relationship("Book", back_populates="author")
     
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=func.now())
