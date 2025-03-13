@@ -1,6 +1,11 @@
+import csv
+from io import StringIO
+import json
 from typing import Optional
+from fastapi import UploadFile
 from pydantic import ValidationError
 
+from custom_exceptions.book_exceptions import BookBulkImportException
 from schemas.validation_schemas import BookFilterParams, BookSortParams
 from utils.enums import GenreEnum
 from utils.validation_funcs import handle_validation_error
@@ -8,14 +13,14 @@ from utils.validation_funcs import handle_validation_error
 
 def get_filters(
     title: Optional[str] = None,
-    year: Optional[int] = None,
+    published_year: Optional[int] = None,
     author_name: Optional[str] = None,
     genre: Optional[GenreEnum] = None
 ) -> BookFilterParams:
     try:
         return BookFilterParams(
             title=title,
-            year=year,
+            published_year=published_year,
             author_name=author_name,
             genre=genre,
         )
@@ -34,3 +39,19 @@ def get_sorting(
         )
     except ValidationError as e:
         handle_validation_error(e)
+
+def split_into_batches(data, batch_size):
+    for i in range(0, len(data), batch_size):
+        yield data[i:i + batch_size]
+
+
+async def parse_file(file: UploadFile):
+    if file.content_type == 'application/json':
+        return json.loads(await file.read())
+    elif file.content_type == 'text/csv':
+        content = await file.read()
+        decoded_content = content.decode('utf-8')
+        csv_reader = csv.DictReader(StringIO(decoded_content))
+        return [dict(row) for row in csv_reader]
+    else:
+        raise BookBulkImportException("Unsupported file format")

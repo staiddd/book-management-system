@@ -5,14 +5,14 @@ from utils.enums import GenreEnum
 
 class BookFilterParams(BaseModel):
     title: Optional[str] = None
-    year: Optional[int] = None
+    published_year: Optional[int] = None
     author_name: Optional[str] = None
     genre: Optional[GenreEnum] = None
 
-    @field_validator('year', mode='after')
-    def validate_year(cls, v):
+    @field_validator('published_year', mode='after')
+    def validate_published_year(cls, v):
         if v is not None and v <= 1800:
-            raise ValueError('year must be above 1800')
+            raise ValueError('published_year must be above 1800')
         return v
 
     @field_validator('title', mode='after')

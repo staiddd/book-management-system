@@ -9,3 +9,8 @@ class GenreEnum(str, Enum):
     BIOGRAPHY = "BIOGRAPHY"
     HISTORY = "HISTORY"
     OTHER = "OTHER"
+
+
+class OnErrorEnum(str, Enum):
+    SKIP = "SKIP"
+    RAISE_ERROR = "RAISE_ERROR"

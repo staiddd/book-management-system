@@ -1,7 +1,7 @@
 from typing import List
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
-from schemas.book_schemas import BookCreateSchema, BookNewSchema, BookSchema
+from schemas.book_schemas import BookCreateSchema, BookNewSchema, BookSchema, BookUpdateSchema
 from schemas.author_schemas import AuthorSchema
 
 from custom_exceptions.book_exceptions import (
@@ -23,9 +23,9 @@ class BookRepository:
             conditions.append("books.title ILIKE :title")
             params["title"] = f"%{filters.title}%"
 
-        if filters.year is not None:
-            conditions.append("books.published_year = :year")
-            params["year"] = filters.year
+        if filters.published_year is not None:
+            conditions.append("books.published_year = :published_year")
+            params["published_year"] = filters.published_year
 
         if filters.author_name:
             conditions.append("authors.name ILIKE :author_name")
@@ -130,7 +130,7 @@ class BookRepository:
             params = {
                 "title": book_insert.title,
                 "published_year": book_insert.published_year,
-                "genre": book_insert.genre.value.upper(),
+                "genre": book_insert.genre.value,
                 "author_id": book_insert.author_id
             }
 
@@ -155,3 +155,90 @@ class BookRepository:
         except Exception as e:
             await session.rollback()
             raise BookCreateException(f"Error while creating book: {str(e)}")
+        
+    async def create_books_bulk(
+        self,
+        session: AsyncSession,
+        books_insert: List[dict]
+    ) -> List[BookNewSchema]:
+        try:
+            query = """
+                INSERT INTO books (title, published_year, genre, author_id)
+                VALUES (:title, :published_year, :genre, :author_id)
+                RETURNING id, title, published_year, genre, author_id, created_at, updated_at;
+            """
+
+            await session.execute(text(query), books_insert)
+            await session.commit()
+            return None
+
+        except Exception as e:
+            await session.rollback()
+            raise BookCreateException(f"Error while creating books: {str(e)}")
+
+    async def update_book(
+        self,
+        session: AsyncSession,
+        book_update: BookUpdateSchema,
+        book_id: int
+    ) -> BookNewSchema:
+        try:
+            query = """
+                UPDATE books
+                SET 
+                    title = COALESCE(:title, title),
+                    published_year = COALESCE(:published_year, published_year),
+                    genre = COALESCE(:genre, genre),
+                    author_id = COALESCE(:author_id, author_id),
+                    updated_at = NOW()
+                WHERE id = :book_id
+                RETURNING id, title, published_year, genre, author_id, created_at, updated_at;
+            """
+
+            params = {
+                "title": book_update.title,
+                "published_year": book_update.published_year,
+                "genre": book_update.genre.value if book_update.genre else None,
+                "author_id": book_update.author_id,
+                "book_id": book_id
+            }
+
+            result = await session.execute(text(query), params)
+            updated_book = result.fetchone()
+
+            await session.commit()
+
+            if not updated_book:
+                return None
+
+            return BookNewSchema(
+                id=updated_book.id,
+                title=updated_book.title,
+                published_year=updated_book.published_year,
+                genre=updated_book.genre,
+                author_id=updated_book.author_id,
+                created_at=updated_book.created_at,
+                updated_at=updated_book.updated_at
+            )
+
+        except Exception as e:
+            await session.rollback()
+            raise BookUpdateException(f"Error while updating book: {str(e)}")
+        
+    async def delete_book(
+        self,
+        session: AsyncSession,
+        book_id: int
+    ) -> None:
+        try:
+            query = """
+                DELETE FROM books
+                WHERE id = :book_id;
+            """
+
+            await session.execute(text(query), {"book_id": book_id})
+            await session.commit()
+
+        except Exception as e:
+            await session.rollback()
+            raise BookDeleteException(f"Error while deleting book: {str(e)}")

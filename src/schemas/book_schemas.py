@@ -15,8 +15,13 @@ class BookBaseSchema(BaseModel):
 
     @field_validator('published_year', mode='after')
     def validate_published_year(cls, v):
-        if v is not None and v <= 1800:
-            raise ValueError('published_year must be above 1800')
+        current_year = datetime.now().year
+
+        if v is not None:
+            if v <= 1800:
+                raise ValueError('published_year must be above 1800')
+            if v > current_year:
+                raise ValueError(f'published_year cannot be greater than {current_year}')
         return v
 
     @field_validator('title', mode='after')
@@ -48,9 +53,12 @@ class BookCreateSchema(BookBaseSchema):
     
 class BookNewSchema(BookCreateSchema):
     id: int
+    created_at: datetime
+    updated_at: datetime
 
 
 class BookUpdateSchema(BookBaseSchema):
     title: Optional[str] = None
     published_year: Optional[int] = None
     genre: Optional[GenreEnum] = None
+    author_id: Optional[int] = None
