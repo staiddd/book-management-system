@@ -8,6 +8,7 @@ from custom_exceptions.book_exceptions import (
     BookCreateException,
     BookDeleteException,
     BookGetException,
+    BookNotFoundException,
     BookUpdateException,
 )
 from schemas.validation_schemas import BookFilterParams, BookSortParams
@@ -17,10 +18,6 @@ class BookRepository:
     def _build_conditions(self, filters: BookFilterParams) -> tuple:
         conditions = []
         params = {}
-
-        if filters.book_id is not None:
-            conditions.append("books.id = :book_id")
-            params["book_id"] = filters.book_id
 
         if filters.title:
             conditions.append("books.title ILIKE :title")
@@ -74,5 +71,38 @@ class BookRepository:
                     author=AuthorSchema(id=row.author_id, name=row.author_name)
                 ) for row in books
             ]
+        except Exception as e:
+            raise BookGetException(str(e))
+        
+    async def get_book_by_id(
+        self,
+        session: AsyncSession,
+        book_id: int,
+    ) -> BookSchema:
+        try:
+            query = """
+                SELECT books.id, books.title, books.published_year, books.genre, authors.id as author_id, authors.name as author_name
+                FROM books
+                JOIN authors ON books.author_id = authors.id
+                WHERE books.id = :book_id
+                LIMIT 1
+            """
+            
+            params = {"book_id": book_id}
+            
+            result = await session.execute(text(query), params)
+            book = result.fetchone()
+
+            if not book:
+                raise BookNotFoundException()
+
+            return BookSchema(
+                id=book.id,
+                title=book.title,
+                published_year=book.published_year,
+                genre=book.genre,
+                author=AuthorSchema(id=book.author_id, name=book.author_name)
+            )
+        
         except Exception as e:
             raise BookGetException(str(e))

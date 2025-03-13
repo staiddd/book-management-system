@@ -6,14 +6,12 @@ from utils.validation_funcs import handle_validation_error
 
 
 def get_filters(
-    book_id: Optional[int] = None,
     title: Optional[str] = None,
     year: Optional[int] = None,
     author_name: Optional[str] = None
 ) -> BookFilterParams:
     try:
         return BookFilterParams(
-            book_id=book_id,
             title=title,
             year=year,
             author_name=author_name,

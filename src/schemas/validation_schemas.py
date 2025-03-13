@@ -3,21 +3,14 @@ from pydantic import BaseModel, field_validator
 
 
 class BookFilterParams(BaseModel):
-    book_id: Optional[int] = None
     title: Optional[str] = None
     year: Optional[int] = None
     author_name: Optional[str] = None
 
-    @field_validator('book_id', mode='after')
-    def validate_book_id(cls, v):
-        if v is not None and v <= 0:
-            raise ValueError('book_id must be a positive integer')
-        return v
-
     @field_validator('year', mode='after')
     def validate_year(cls, v):
         if v is not None and v <= 1800:
-            raise ValueError('year must be a positive integer')
+            raise ValueError('year must be above 1800')
         return v
 
     @field_validator('title', mode='after')

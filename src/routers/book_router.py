@@ -5,6 +5,7 @@ from dependencies import SessionDep, BookRepositoryDep
 from schemas.book_schemas import BookSchema
 from schemas.validation_schemas import BookFilterParams, BookSortParams
 from utils.util_funcs import get_filters, get_sorting
+from utils.validation_funcs import validate_book_id
 
 
 router = APIRouter(
@@ -27,4 +28,15 @@ async def get_books(
         limit=limit,
         filters=filters,
         sorting=sorting,
+    )
+
+@router.get('/{book_id}/', response_model=BookSchema)
+async def get_book_by_id(
+    session: SessionDep,
+    book_repo: BookRepositoryDep,
+    book_id: int = Depends(validate_book_id),
+) -> BookSchema:
+    return await book_repo.get_book_by_id(
+        session=session,
+        book_id=book_id
     )
