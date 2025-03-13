@@ -43,7 +43,7 @@ async def get_book_by_id(
         book_id=book_id
     )
 
-@router.post('/', response_model=BookNewSchema)
+@router.post('/', response_model=BookNewSchema, status_code=status.HTTP_201_CREATED)
 async def create_book(
     session: SessionDep,
     book_repo: BookRepositoryDep,
@@ -54,7 +54,7 @@ async def create_book(
         book_insert=book_insert
     )
 
-@router.post('/bulk/')
+@router.post('/bulk/', status_code=status.HTTP_201_CREATED)
 async def bulk_import_books(
     session: SessionDep,
     book_repo: BookRepositoryDep,
