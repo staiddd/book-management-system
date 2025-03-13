@@ -2,19 +2,22 @@ from typing import Optional
 from pydantic import ValidationError
 
 from schemas.validation_schemas import BookFilterParams, BookSortParams
+from utils.enums import GenreEnum
 from utils.validation_funcs import handle_validation_error
 
 
 def get_filters(
     title: Optional[str] = None,
     year: Optional[int] = None,
-    author_name: Optional[str] = None
+    author_name: Optional[str] = None,
+    genre: Optional[GenreEnum] = None
 ) -> BookFilterParams:
     try:
         return BookFilterParams(
             title=title,
             year=year,
             author_name=author_name,
+            genre=genre,
         )
     except ValidationError as e:
         handle_validation_error(e)

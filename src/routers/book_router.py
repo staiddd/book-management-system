@@ -2,7 +2,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends
 
 from dependencies import SessionDep, BookRepositoryDep
-from schemas.book_schemas import BookSchema
+from schemas.book_schemas import BookCreateSchema, BookNewSchema, BookSchema, BookUpdateSchema
 from schemas.validation_schemas import BookFilterParams, BookSortParams
 from utils.util_funcs import get_filters, get_sorting
 from utils.validation_funcs import validate_book_id
@@ -39,4 +39,15 @@ async def get_book_by_id(
     return await book_repo.get_book_by_id(
         session=session,
         book_id=book_id
+    )
+
+@router.post('/', response_model=BookNewSchema)
+async def create_book(
+    session: SessionDep,
+    book_repo: BookRepositoryDep,
+    book_insert: BookCreateSchema
+) -> BookNewSchema:
+    return await book_repo.create_book(
+        session=session,
+        book_insert=book_insert
     )

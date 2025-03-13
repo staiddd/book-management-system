@@ -1,11 +1,13 @@
 from typing import Optional
 from pydantic import BaseModel, field_validator
-
+from database.models import Book
+from utils.enums import GenreEnum
 
 class BookFilterParams(BaseModel):
     title: Optional[str] = None
     year: Optional[int] = None
     author_name: Optional[str] = None
+    genre: Optional[GenreEnum] = None
 
     @field_validator('year', mode='after')
     def validate_year(cls, v):
@@ -34,3 +36,9 @@ class BookFilterParams(BaseModel):
 class BookSortParams(BaseModel):
     order_by: Optional[str] = "id"
     order_desc: bool = False
+
+    @field_validator('order_by', mode='after')
+    def validate_order_by(cls, v):
+        if v not in Book.__table__.columns:
+            raise ValueError(f'order_by must be in [{Book.__table__.columns}]')
+        return v
