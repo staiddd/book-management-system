@@ -2,12 +2,12 @@ from typing import AsyncGenerator
 from httpx import ASGITransport, AsyncClient
 import pytest
 from sqlalchemy import text
-from config import settings
+from src.config import settings
 from sqlalchemy.ext.asyncio import create_async_engine
-from database.database import engine, session_factory
-from database.models import Base, Book
-from main import app
-from utils.enums import GenreEnum
+from src.database.database import engine, session_factory
+from src.database.models import Base, Book
+from src.main import app
+from src.utils.enums import GenreEnum
 from tests.test_auth import register_user
 
 async def create_database():
@@ -53,23 +53,31 @@ async def ac() -> AsyncGenerator[AsyncClient, None]:
         finally:
             await ac.aclose()
 
-
-@pytest.fixture(scope="function")
-async def test_books(register_user):
+@pytest.fixture(scope="session")
+async def session():
     async with session_factory() as session:
-        author_id = register_user["user"]["id"] 
+        try:
+            yield session
+        finally:
+            if session.in_transaction():
+                await session.rollback()
+            await session.close()
 
-        books = [
-            Book(title="Book 1", published_year=2020, genre=GenreEnum.BIOGRAPHY, author_id=author_id),
-            Book(title="Book 2", published_year=2021, genre=GenreEnum.FANTASY, author_id=author_id),
-        ]
+@pytest.fixture(scope="session")
+async def test_books(register_user, session):
+    author_id = register_user["user_id"] 
 
-        session.add_all(books)
-        await session.commit()
+    books = [
+        Book(title="Book 1", published_year=2020, genre=GenreEnum.BIOGRAPHY, author_id=author_id),
+        Book(title="Book 2", published_year=2021, genre=GenreEnum.FANTASY, author_id=author_id),
+    ]
 
-        yield books
+    session.add_all(books)
+    await session.commit()
 
-        for book in books:
-            await session.delete(book)
+    yield books
+
+    for book in books:
+        await session.delete(book)
             
-        await session.commit()
+    await session.commit()
