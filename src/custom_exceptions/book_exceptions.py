@@ -24,3 +24,7 @@ class BookNotFoundException(HTTPException):
 class BookBulkImportException(HTTPException):
     def __init__(self, detail="Unsupported file format"):
         super().__init__(status_code=status.HTTP_400_BAD_REQUEST, detail=detail)
+
+class BookBulkExportException(HTTPException):
+    def __init__(self, detail="Unsupported format. Please choose 'csv' or 'json'."):
+        super().__init__(status_code=status.HTTP_400_BAD_REQUEST, detail=detail)

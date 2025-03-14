@@ -1,18 +1,24 @@
+import csv
+from io import StringIO
+import json
 from typing import List, Optional
-from fastapi import APIRouter, UploadFile, status
+from fastapi import APIRouter, Request, Response, UploadFile, status
 
 from auth.validation import check_book_author
 from constants import ALLOWED_FILE_TYPES, REQUIRED_FILE_FIELDS
-from custom_exceptions.book_exceptions import BookBulkImportException
+from custom_exceptions.book_exceptions import BookBulkExportException, BookBulkImportException
 from dependencies import (
     ValidateBatchSizeDep, FiltersDep,
     SessionDep, BookRepositoryDep, SortingDep, 
     UserDep, ValidateBookIdDep
 )
 from schemas.book_schemas import BookCreateSchema, BookNewSchema, BookSchema, BookUpdateSchema
-from utils.enums import OnErrorEnum
+from utils.enums import FileFormat, OnErrorEnum
 from utils.util_funcs import parse_file, split_into_batches
 from utils.validation_funcs import validate_book_data
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+from config import settings
 
 
 router = APIRouter(
@@ -20,8 +26,12 @@ router = APIRouter(
     tags=["Book Operations"],
 )
 
+limiter = Limiter(key_func=get_remote_address, storage_uri=settings.REDIS_URL)
+
 @router.get('/', response_model=List[BookSchema])
+@limiter.limit("5/minute")  # 5 requests in a minute
 async def get_books(
+    request: Request,
     session: SessionDep,
     book_repo: BookRepositoryDep,
     filters: FiltersDep,
@@ -37,8 +47,83 @@ async def get_books(
         sorting=sorting,
     )
 
+@router.get('/export/')
+@limiter.limit("5/minute")  # 5 requests in a minute
+async def export_books(
+    request: Request,
+    session: SessionDep,
+    book_repo: BookRepositoryDep,
+    filters: FiltersDep,
+    sorting: SortingDep,
+    skip: Optional[int] = 0,
+    limit: Optional[int] = 10,
+    format: Optional[FileFormat] = FileFormat.CSV
+):
+    books = await book_repo.get_books(
+        session=session, 
+        skip=skip, 
+        limit=limit,
+        filters=filters,
+        sorting=sorting,
+    )
+
+    headers = [
+        "ID", "Title", "Published Year", "Genre", "Author ID", "Author Name", "Created At", "Updated At"
+    ]
+
+    if format == FileFormat.CSV:
+        output = StringIO()
+        csv_writer = csv.writer(output)
+
+        csv_writer.writerow(headers)
+
+        for book in books:
+            csv_writer.writerow([
+                book.id,
+                book.title,
+                book.published_year,
+                book.genre.value,
+                book.author.id,
+                book.author.name,
+                book.created_at,
+                book.updated_at
+            ])
+
+        output.seek(0)
+        return Response(
+            content=output.getvalue(),
+            media_type="text/csv",
+            headers={"Content-Disposition": "attachment; filename=books_export.csv"}
+        )
+
+    elif format == FileFormat.JSON:
+        books_data = [
+            {
+                "id": book.id,
+                "title": book.title,
+                "published_year": book.published_year,
+                "genre": book.genre.value,
+                "author_id": book.author.id,
+                "author_name": book.author.name,
+                "created_at": book.created_at.isoformat(),
+                "updated_at": book.updated_at.isoformat()
+            }
+            for book in books
+        ]
+
+        return Response(
+            content=json.dumps(books_data),
+            media_type="application/json",
+            headers={"Content-Disposition": "attachment; filename=books_export.json"}
+        )
+
+    else:
+        raise BookBulkExportException()
+    
 @router.get('/{book_id}/', response_model=BookSchema)
+@limiter.limit("5/minute")  # 5 requests in a minute
 async def get_book_by_id(
+    request: Request,
     session: SessionDep,
     book_repo: BookRepositoryDep,
     book_id: ValidateBookIdDep,
@@ -49,7 +134,9 @@ async def get_book_by_id(
     )
 
 @router.post('/', response_model=BookNewSchema, status_code=status.HTTP_201_CREATED)
+@limiter.limit("5/minute")  # 5 requests in a minute
 async def create_book(
+    request: Request,
     session: SessionDep,
     book_repo: BookRepositoryDep,
     book_insert: BookCreateSchema,
@@ -66,7 +153,9 @@ async def create_book(
     status_code=status.HTTP_201_CREATED, 
     description=f'Required fields: {", ".join(REQUIRED_FILE_FIELDS)}. Allowed file types: {", ".join(ALLOWED_FILE_TYPES)}'
 )
+@limiter.limit("5/minute")  # 5 requests in a minute
 async def bulk_import_books(
+    request: Request,
     session: SessionDep,
     book_repo: BookRepositoryDep,
     file: UploadFile,
@@ -92,7 +181,9 @@ async def bulk_import_books(
 
 
 @router.patch('/{book_id}/', response_model=BookNewSchema)
+@limiter.limit("5/minute")  # 5 requests in a minute
 async def update_book(
+    request: Request,
     session: SessionDep,
     book_repo: BookRepositoryDep,
     book_update: BookUpdateSchema,
@@ -109,7 +200,9 @@ async def update_book(
     )
 
 @router.delete('/{book_id}/', status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit("5/minute")  # 5 requests in a minute
 async def delete_book(
+    request: Request,
     session: SessionDep,
     book_repo: BookRepositoryDep,
     book_id: ValidateBookIdDep,
