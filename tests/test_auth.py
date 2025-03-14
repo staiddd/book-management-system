@@ -35,7 +35,7 @@ async def register_user(ac):
     return user_data
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="session")
 async def login_user(register_user, ac):
     response = await ac.post(
         url=API_URL + "/login/",
