@@ -77,12 +77,11 @@ async def bulk_import_books(
     try:
         data = await parse_file(file)
 
-        for batch in split_into_batches(data, batch_size):
-            validated_data: list[dict] = validate_book_data(batch, on_validation_error)
+        if not data:
+            return {"message": "empty"}
 
-            if not validated_data:
-                return {"message": "empty"}
-            
+        for batch in split_into_batches(data, batch_size):
+            validated_data: list[dict] = validate_book_data(batch, on_validation_error)          
             await book_repo.create_books_bulk(session, validated_data, author.id)
 
         return {"message": "success"}
