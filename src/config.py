@@ -23,6 +23,7 @@ class Settings(BaseSettings):
 
     DB_URL: str
 
+    MODE: str
     private_key: str = read_key_file("jwt-private.pem")
     public_key: str = read_key_file("jwt-public.pem")
     algorithm: str = "RS256"
