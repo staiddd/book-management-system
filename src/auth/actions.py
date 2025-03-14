@@ -1,12 +1,8 @@
 from datetime import timedelta
+from constants import ACCESS_TOKEN_TYPE, REFRESH_TOKEN_TYPE, TOKEN_TYPE_FIELD
 from schemas.auth_schemas import UserIn
 from auth.utils import encode_jwt
 from config import settings
-
-
-TOKEN_TYPE_FIELD = "type"
-ACCESS_TOKEN_TYPE = "access"
-REFRESH_TOKEN_TYPE = "refresh"
 
 
 def create_jwt(

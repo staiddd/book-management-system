@@ -1,6 +1,7 @@
 from fastapi import HTTPException, Path, Query, status
 from pydantic import ValidationError
 
+from constants import REQUIRED_FILE_FIELDS
 from custom_exceptions.book_exceptions import BookBulkImportException
 from schemas.book_schemas import BookCreateSchema
 from utils.enums import OnErrorEnum
@@ -30,12 +31,11 @@ def validate_batch_size(batch_size: int = Query(100, gt=0)) -> int:
     return batch_size
 
 def validate_book_data(data, on_validation_error):
-    required_fields = {"title", "published_year", "genre", "author_id"}
     result = []
 
     for entry in data:
         try:
-            if not required_fields.issubset(entry.keys()):
+            if not REQUIRED_FILE_FIELDS.issubset(entry.keys()):
                 raise BookBulkImportException("Missing required fields in data")
 
             validated_data = BookCreateSchema(**entry)
@@ -44,6 +44,6 @@ def validate_book_data(data, on_validation_error):
         except Exception:
             if on_validation_error == OnErrorEnum.SKIP:
                 continue
-            raise BookBulkImportException(f"Something went wrong in validation book data: {entry}")
+            raise BookBulkImportException(f"Something went wrong in validation book data: {entry}. Required fields: {REQUIRED_FILE_FIELDS}")
     
     return result

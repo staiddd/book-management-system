@@ -43,16 +43,19 @@ class BookSchema(BookBaseSchema):
 
 
 class BookCreateSchema(BookBaseSchema):
-    author_id: int
+    pass
 
-    @field_validator('author_id', mode='after')
-    def validate_author_id(cls, v):
-        if v is not None and v < 0:
-            raise ValueError('author_id must be above 0')
-        return v
+    # author_id: int
+
+    # @field_validator('author_id', mode='after')
+    # def validate_author_id(cls, v):
+    #     if v is not None and v < 0:
+    #         raise ValueError('author_id must be above 0')
+    #     return v
     
 class BookNewSchema(BookCreateSchema):
     id: int
+    author_id: int
     created_at: datetime
     updated_at: datetime
 
@@ -61,4 +64,4 @@ class BookUpdateSchema(BookBaseSchema):
     title: Optional[str] = None
     published_year: Optional[int] = None
     genre: Optional[GenreEnum] = None
-    author_id: Optional[int] = None
+    # author_id: Optional[int] = None

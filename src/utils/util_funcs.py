@@ -5,6 +5,7 @@ from typing import Optional
 from fastapi import UploadFile
 from pydantic import ValidationError
 
+from constants import ALLOWED_FILE_TYPES
 from custom_exceptions.book_exceptions import BookBulkImportException
 from schemas.validation_schemas import BookFilterParams, BookSortParams
 from utils.enums import GenreEnum
@@ -54,4 +55,4 @@ async def parse_file(file: UploadFile):
         csv_reader = csv.DictReader(StringIO(decoded_content))
         return [dict(row) for row in csv_reader]
     else:
-        raise BookBulkImportException("Unsupported file format")
+        raise BookBulkImportException(f"Unsupported file format. Allowed file types: {', '.join(ALLOWED_FILE_TYPES)}")

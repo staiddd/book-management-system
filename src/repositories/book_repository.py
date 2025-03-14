@@ -118,7 +118,8 @@ class BookRepository:
     async def create_book(
         self,
         session: AsyncSession,
-        book_insert: BookCreateSchema
+        book_insert: BookCreateSchema,
+        author_id: int
     ) -> BookNewSchema:
         try:
             query = """
@@ -131,7 +132,7 @@ class BookRepository:
                 "title": book_insert.title,
                 "published_year": book_insert.published_year,
                 "genre": book_insert.genre.value,
-                "author_id": book_insert.author_id
+                "author_id": author_id
             }
 
             result = await session.execute(text(query), params)
@@ -159,18 +160,22 @@ class BookRepository:
     async def create_books_bulk(
         self,
         session: AsyncSession,
-        books_insert: List[dict]
+        books_insert: List[dict],
+        author_id: int,
     ) -> List[BookNewSchema]:
         try:
             query = """
                 INSERT INTO books (title, published_year, genre, author_id)
                 VALUES (:title, :published_year, :genre, :author_id)
-                RETURNING id, title, published_year, genre, author_id, created_at, updated_at;
             """
 
-            await session.execute(text(query), books_insert)
+            # We pass author_id separately, and the rest of the data from books_insert
+            await session.execute(
+                text(query),
+                [{"author_id": author_id, **book} for book in books_insert]
+            )
+
             await session.commit()
-            return None
 
         except Exception as e:
             await session.rollback()
@@ -180,7 +185,8 @@ class BookRepository:
         self,
         session: AsyncSession,
         book_update: BookUpdateSchema,
-        book_id: int
+        book_id: int,
+        author_id: int,
     ) -> BookNewSchema:
         try:
             query = """
@@ -189,8 +195,7 @@ class BookRepository:
                     title = COALESCE(:title, title),
                     published_year = COALESCE(:published_year, published_year),
                     genre = COALESCE(:genre, genre),
-                    author_id = COALESCE(:author_id, author_id),
-                    updated_at = NOW()
+                    author_id = COALESCE(:author_id, author_id)
                 WHERE id = :book_id
                 RETURNING id, title, published_year, genre, author_id, created_at, updated_at;
             """
@@ -199,7 +204,7 @@ class BookRepository:
                 "title": book_update.title,
                 "published_year": book_update.published_year,
                 "genre": book_update.genre.value if book_update.genre else None,
-                "author_id": book_update.author_id,
+                "author_id": author_id,
                 "book_id": book_id
             }
 
@@ -209,7 +214,7 @@ class BookRepository:
             await session.commit()
 
             if not updated_book:
-                return None
+                raise BookNotFoundException()
 
             return BookNewSchema(
                 id=updated_book.id,

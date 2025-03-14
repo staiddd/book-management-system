@@ -6,6 +6,9 @@ from auth.utils import (
     validate_password,
     decode_jwt
 )
+from constants import ACCESS_TOKEN_TYPE, REFRESH_TOKEN_TYPE, TOKEN_TYPE_FIELD
+from database import session_getter
+from repositories.book_repository import BookRepository
 from repositories.user_repository import UserRepository
 from schemas.auth_schemas import UserOut
 from custom_exceptions.auth_exceptions import (
@@ -13,15 +16,11 @@ from custom_exceptions.auth_exceptions import (
     invalid_token_type_exception,
     token_not_found_exception,
     invalid_token_error,
+    not_enough_rights_exception
 )
 from sqlalchemy.ext.asyncio import AsyncSession
-from auth.actions import (
-    REFRESH_TOKEN_TYPE,
-    TOKEN_TYPE_FIELD,
-    ACCESS_TOKEN_TYPE,
-)
-
-from dependencies import SessionDep, UserRepositoryDep
+from schemas.author_schemas import AuthorSchema
+from schemas.book_schemas import BookSchema
 
 # interface for entering name and password, and then automatically getting token and sending it in headers
 oauth2_scheme = OAuth2PasswordBearer(
@@ -29,8 +28,8 @@ oauth2_scheme = OAuth2PasswordBearer(
 )
 
 async def validate_auth_user(
-    session: SessionDep,
-    user_repo: UserRepositoryDep,
+    session: Annotated[AsyncSession, Depends(session_getter)],
+    user_repo: Annotated[UserRepository, Depends(UserRepository)],
     email: str = Form(alias="username"),
     password: str = Form(),
 ):
@@ -102,8 +101,8 @@ def get_auth_user_from_token_of_type(token_type: str):
     async def get_auth_user_from_token(
         # we get the token from the headers
         payload: Annotated[dict, Depends(get_current_token_payload)],
-        user_repo: UserRepositoryDep,
-        session: SessionDep,
+        user_repo: Annotated[UserRepository, Depends(UserRepository)],
+        session: Annotated[AsyncSession, Depends(session_getter)],
     ) -> UserOut:
         # check if the entered token matches the token in the header
         await validate_token_type(payload=payload, token_type=token_type)
@@ -117,3 +116,14 @@ get_current_auth_user = get_auth_user_from_token_of_type(token_type=ACCESS_TOKEN
 # Check that the user is authenticated to issue a refresh token
 get_current_auth_user_for_refresh = get_auth_user_from_token_of_type(token_type=REFRESH_TOKEN_TYPE)
 
+async def check_book_author(
+    session: AsyncSession, 
+    book_repo: BookRepository, 
+    book_id: int, 
+    author: AuthorSchema
+) -> BookSchema:
+    """Checks that the user is the author of the book, otherwise throws an exception."""
+    book: BookSchema = await book_repo.get_book_by_id(session, book_id)
+    
+    if book.author.id != author.id:
+        raise not_enough_rights_exception
