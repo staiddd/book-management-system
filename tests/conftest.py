@@ -1,3 +1,4 @@
+import os
 from typing import AsyncGenerator
 from httpx import ASGITransport, AsyncClient
 import pytest
@@ -81,3 +82,12 @@ async def test_books(register_user, session):
         await session.delete(book)
             
     await session.commit()
+
+@pytest.fixture(scope="session")
+def test_files():
+    base_path = os.path.join(os.path.dirname(__file__), 'content')
+    return {
+        'csv': ('test_book.csv', open(os.path.join(base_path, 'test_book.csv'), 'rb'), 'text/csv'),
+        'csv_empty': ('test_empty_book.csv', open(os.path.join(base_path, 'test_empty_book.csv'), 'rb'), 'text/csv'),
+        'json': ('test_book.json', open(os.path.join(base_path, 'test_book.json'), 'rb'), 'application/json'),
+    }
