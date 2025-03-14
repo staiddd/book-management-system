@@ -21,6 +21,8 @@ class Settings(BaseSettings):
     POSTGRES_PORT: str
     POSTGRES_HOST: str
 
+    REDIS_URL: str = "redis://redis:6379/0"
+
     DB_URL: str
 
     MODE: str

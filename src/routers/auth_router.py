@@ -1,11 +1,14 @@
 from typing import Annotated
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Request, status
+from slowapi import Limiter
 
 from auth.actions import create_access_token, create_refresh_token
 from auth.validation import validate_auth_user, get_current_auth_user_for_refresh
 from dependencies import SessionDep, UserRepositoryDep
 from schemas.auth_schemas import TokenInfo, UserIn, UserOut
 from custom_exceptions.auth_exceptions import user_already_exists_exception
+from slowapi.util import get_remote_address
+from config import settings
 
 
 router = APIRouter(
@@ -13,13 +16,16 @@ router = APIRouter(
     tags=["Auth Operations"],
 )
 
+limiter = Limiter(key_func=get_remote_address, storage_uri=settings.REDIS_URL)
 
 @router.post(
     "/signup/", 
     summary="Create new user",
     status_code=status.HTTP_201_CREATED,
 )
+@limiter.limit("5/minute")  # 5 requests in a minute
 async def create_user_handler(
+    request: Request,
     session: SessionDep,
     user_repo: UserRepositoryDep,
     user_in: UserIn
@@ -53,7 +59,9 @@ async def create_user_handler(
     summary="Create access and refresh tokens for user", 
     response_model=TokenInfo
 )
+@limiter.limit("5/minute")  # 5 requests in a minute
 async def login_handler(
+    request: Request,
     user: Annotated[UserOut, Depends(validate_auth_user)],
 ) -> TokenInfo:
     # Create access and refresh token using email
@@ -73,7 +81,9 @@ async def login_handler(
     status_code=status.HTTP_201_CREATED,
     summary="Create new access token"
 )
+@limiter.limit("5/minute")  # 5 requests in a minute
 async def auth_refresh_jwt(
+    request: Request,
     user: Annotated[UserOut, Depends(get_current_auth_user_for_refresh)],
 ) -> TokenInfo: 
     access_token = create_access_token(user)
