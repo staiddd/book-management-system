@@ -55,4 +55,4 @@ async def parse_file(file: UploadFile):
         csv_reader = csv.DictReader(StringIO(decoded_content))
         return [dict(row) for row in csv_reader]
     else:
-        raise BookBulkImportException(f"Unsupported file format. Allowed file types: {', '.join(ALLOWED_FILE_TYPES)}")
+        raise BookBulkImportException(f"Unsupported file format. Allowed file types: {', '.join(ALLOWED_FILE_TYPES)}. Got type: {file.content_type}")
