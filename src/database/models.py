@@ -25,6 +25,8 @@ class Book(Base):
     __tablename__ = "books"
     
     title: Mapped[str] = mapped_column(String(255), nullable=False)
+    file_path: Mapped[str] = mapped_column(String(255), nullable=False)
+
     published_year: Mapped[int] = mapped_column(Integer, nullable=False)
     genre: Mapped[GenreEnum] = mapped_column(Enum(GenreEnum), nullable=False)
 

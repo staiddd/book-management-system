@@ -10,6 +10,7 @@ class BookBaseSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     title: str
+    file_path: str
     published_year: int
     genre: GenreEnum
 
@@ -64,4 +65,5 @@ class BookUpdateSchema(BookBaseSchema):
     title: Optional[str] = None
     published_year: Optional[int] = None
     genre: Optional[GenreEnum] = None
+    file_path: Optional[str] = None # maybe remove
     # author_id: Optional[int] = None

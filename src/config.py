@@ -21,6 +21,10 @@ class Settings(BaseSettings):
     POSTGRES_PORT: str
     POSTGRES_HOST: str
 
+    aws_bucket_name: str
+    aws_access_key_id: str
+    aws_secret_access_key: str
+
     REDIS_URL: str = "redis://redis:6379/0"
 
     DB_URL: str

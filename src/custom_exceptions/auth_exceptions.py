@@ -1,49 +1,52 @@
-from fastapi import HTTPException, status
+from fastapi import status
 from jwt import InvalidTokenError
+from custom_exceptions.base_exceptions import AppException
 
 
-unauthed_user_exception = HTTPException(
-    status_code=status.HTTP_401_UNAUTHORIZED,
-    detail="invalid email or password",
-)
+class AuthException(AppException):
+    """Base class for authentication errors"""
+    pass
+
+class UserCreateException(AuthException):
+    def __init__(self, detail="Failed to create new user"):
+        super().__init__(status_code=status.HTTP_400_BAD_REQUEST, detail=detail)
 
 
-token_not_found_exception = HTTPException(
-    status_code=status.HTTP_401_UNAUTHORIZED,
-    detail="token invalid (user not found)",
-)
+class UserGetException(AuthException):
+    def __init__(self, detail="Failed to get user by email"):
+        super().__init__(status_code=status.HTTP_400_BAD_REQUEST, detail=detail)
 
 
-invalid_token_error = HTTPException(
-    status_code=status.HTTP_401_UNAUTHORIZED,
-    detail=f"invalid token error: {InvalidTokenError}",
-)
+class UserUnexpectedError(AuthException):
+    def __init__(self, detail="User create unexpected error"):
+        super().__init__(status_code=status.HTTP_400_BAD_REQUEST, detail=detail)
 
 
-invalid_token_type_exception = HTTPException(
-    status_code=status.HTTP_401_UNAUTHORIZED,
-    detail=f"invalid token type"
-)
+class UnauthedUserException(AuthException):
+    def __init__(self, detail="Invalid email or password"):
+        super().__init__(status_code=status.HTTP_401_UNAUTHORIZED, detail=detail)
 
 
-user_already_exists_exception = HTTPException(
-    status_code=status.HTTP_400_BAD_REQUEST,
-    detail="User with this email already exists"
-)
+class TokenNotFoundException(AuthException):
+    def __init__(self, detail="Token invalid (user not found)"):
+        super().__init__(status_code=status.HTTP_401_UNAUTHORIZED, detail=detail)
 
 
-user_not_found_exception = HTTPException(
-    status_code=status.HTTP_404_NOT_FOUND,
-    detail="User not found"
-)
+class InvalidTokenErrorException(AuthException):
+    def __init__(self, detail=f"Invalid token error: {InvalidTokenError}"):
+        super().__init__(status_code=status.HTTP_401_UNAUTHORIZED, detail=detail)
 
 
-update_ban_status_exception = HTTPException(
-    status_code=status.HTTP_400_BAD_REQUEST,
-    detail="Failed to update user's ban status"
-)
+class InvalidTokenTypeException(AuthException):
+    def __init__(self, detail="Invalid token type"):
+        super().__init__(status_code=status.HTTP_401_UNAUTHORIZED, detail=detail)
 
-not_enough_rights_exception = HTTPException(
-    status_code=status.HTTP_405_METHOD_NOT_ALLOWED,
-    detail=f"You have not enough rights"
-)
+
+class UserAlreadyExistsException(AuthException):
+    def __init__(self, detail="User with this email already exists"):
+        super().__init__(status_code=status.HTTP_400_BAD_REQUEST, detail=detail)
+
+
+class NotEnoughRightsException(AuthException):
+    def __init__(self, detail="You have not enough rights"):
+        super().__init__(status_code=status.HTTP_405_METHOD_NOT_ALLOWED, detail=detail)

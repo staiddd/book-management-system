@@ -1,56 +1,55 @@
-from sqlalchemy import text
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-
+from database.models import Author
 from auth.utils import hash_password
 from schemas.auth_schemas import UserIn, UserOut
+from custom_exceptions.auth_exceptions import UserCreateException, UserGetException
+
 
 class UserRepository:
+    @classmethod
     async def register_user(
-        self,
+        cls,
         session: AsyncSession, 
         user_in: UserIn,
     ) -> int:
         try:
-            query = text("""
-                INSERT INTO authors (name, email, password_hash)
-                VALUES (:name, :email, :password_hash)
-                RETURNING id;
-            """)
-            result = await session.execute(query, {
-                "name": user_in.name,
-                "email": user_in.email,
-                "password_hash": hash_password(user_in.password_hash)
-            })
+            new_user: Author = Author(
+                name=user_in.name,
+                email=user_in.email,
+                password_hash=hash_password(user_in.password_hash)
+            )
+            session.add(new_user)
             await session.commit()
-            
-            new_user_id = result.scalar_one()
-            return new_user_id
-
-        except Exception as ex:
+            return new_user.id
+        except Exception as e:
             await session.rollback()
-            return f"{ex}: failure to create new user"
+            raise UserCreateException(f"Failed to create new user: {e}")
 
+    @classmethod
     async def get_user_by_email(
-        self,
+        cls,
         session: AsyncSession, 
         email: str,
     ) -> UserOut | None:
-        query = text("""
-            SELECT id, name, email, password_hash, created_at
-            FROM authors 
-            WHERE email = :email;
-        """)
-        result = await session.execute(query, {"email": email})
-        user_row = result.fetchone()
-
-        if user_row:
-            return UserOut(
-                id=user_row.id,
-                name=user_row.name,
-                email=user_row.email,
-                password_hash=user_row.password_hash,
-                created_at=user_row.created_at,
+        try:
+            stmt = (
+                select(Author)
+                .where(Author.email==email)
             )
-        
-        return None
+            result = await session.scalars(stmt)
+            user: Author | None = result.one_or_none()
+
+            if user:
+                return UserOut(
+                    id=user.id,
+                    name=user.name,
+                    email=user.email,
+                    password_hash=user.password_hash,
+                    created_at=user.created_at,
+                )
+            
+            return None
+        except Exception as e:
+            raise UserGetException(f"Failed to get user by email: {e}")
     

@@ -10,12 +10,6 @@ class GenreEnum(str, Enum):
     HISTORY = "HISTORY"
     OTHER = "OTHER"
 
-
-class OnErrorEnum(str, Enum):
-    SKIP = "SKIP"
-    RAISE_ERROR = "RAISE_ERROR"
-
-
 class FileFormat(str, Enum):
     CSV = "CSV"
     JSON = "JSON"
