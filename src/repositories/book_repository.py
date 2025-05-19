@@ -15,9 +15,8 @@ from schemas.validation_schemas import BookFilterParams, BookSortParams
 
 
 class BookRepository:
-    @classmethod
+    @staticmethod
     async def get_books(
-        cls,
         session: AsyncSession,
         filters: BookFilterParams,
         sorting: BookSortParams,
@@ -46,9 +45,9 @@ class BookRepository:
         except Exception as e:
             raise BookGetException(str(e))
     
-    @classmethod
+    @staticmethod
     async def get_book_by_id(
-        cls, session: AsyncSession, book_id: int
+        session: AsyncSession, book_id: int
     ) -> BookSchema:
         try:
             query = select(Book).options(joinedload(Book.author)).filter(Book.id == book_id)
@@ -60,9 +59,9 @@ class BookRepository:
         except Exception as e:
             raise BookGetException(str(e))
     
-    @classmethod
+    @staticmethod
     async def create_book(
-        cls, session: AsyncSession, book_insert: BookCreateSchema, author_id: int
+        session: AsyncSession, book_insert: BookCreateSchema, author_id: int
     ) -> BookNewSchema:
         try:
             new_book = Book(
@@ -80,9 +79,9 @@ class BookRepository:
             await session.rollback()
             raise BookCreateException(f"Error while creating book: {str(e)}")
     
-    @classmethod
+    @staticmethod
     async def update_book(
-        cls, session: AsyncSession, book_update: BookUpdateSchema, book_id: int, author_id: int
+        session: AsyncSession, book_update: BookUpdateSchema, book_id: int, author_id: int
     ) -> BookNewSchema:
         try:
             query = select(Book).filter(Book.id == book_id)
@@ -108,9 +107,8 @@ class BookRepository:
             await session.rollback()
             raise BookUpdateException(f"Error while updating book: {str(e)}")
 
-    @classmethod
+    @staticmethod
     async def delete_book(
-        cls,
         session: AsyncSession,
         book_id: int
     ) -> Book:

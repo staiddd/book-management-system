@@ -7,9 +7,8 @@ from custom_exceptions.auth_exceptions import UserCreateException, UserGetExcept
 
 
 class UserRepository:
-    @classmethod
+    @staticmethod
     async def register_user(
-        cls,
         session: AsyncSession, 
         user_in: UserIn,
     ) -> int:
@@ -26,9 +25,8 @@ class UserRepository:
             await session.rollback()
             raise UserCreateException(f"Failed to create new user: {e}")
 
-    @classmethod
+    @staticmethod
     async def get_user_by_email(
-        cls,
         session: AsyncSession, 
         email: str,
     ) -> UserOut | None:
